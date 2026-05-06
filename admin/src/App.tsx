@@ -134,8 +134,8 @@ export default function App() {
           Save
         </button>
         <p style={{ fontSize: "0.85rem", color: "#9aa5b5", marginTop: 8 }}>
-          Uses <code>X-Api-Key</code>. Dev server proxies <code>/api</code> →
-          backend :3002.
+          Uses <code>X-Api-Key</code>. API base uses <code>VITE_API_BASE_URL</code>{" "}
+          when set, otherwise local <code>/api</code> proxy in dev.
         </p>
       </div>
 

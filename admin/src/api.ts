@@ -1,4 +1,5 @@
-const API = "/api/v1";
+const rawBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const API = rawBase && rawBase.length > 0 ? rawBase.replace(/\/+$/, "") : "/api/v1";
 
 export function getApiKey(): string {
   return localStorage.getItem("outreach_api_key") ?? "";

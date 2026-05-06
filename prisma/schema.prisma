@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConsentStatus {
+  NONE
+  UNKNOWN
+  GRANTED
+  EXPLICIT_OPT_IN
+  REVOKED
+}
+
+enum OutreachStatus {
+  IMPORTED
+  UNMATCHED
+  PENDING
+  QUEUED
+  SENT
+  AWAITING_REPLY
+  FOLLOWUP_SENT
+  HANDOFF
+  CLOSED
+  NOT_INTERESTED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ConversationStatus {
+  OPEN
+  HANDOFF
+  CLOSED
+}
+
+enum ClassificationLabel {
+  INTERESTED
+  NOT_INTERESTED
+  NEEDS_INFO
+  LATER
+  STOP
+  UNKNOWN
+}
+
+model Lead {
+  id                String          @id @default(uuid()) @db.Uuid
+  fullName          String          @map("full_name")
+  phone             String?
+  email             String?
+  company           String?
+  notes             String?
+  source            String
+  consentStatus     ConsentStatus   @map("consent_status")
+  telegramId        String?         @map("telegram_id")
+  outreachStatus    OutreachStatus  @default(IMPORTED) @map("outreach_status")
+  optedOut          Boolean         @default(false) @map("opted_out")
+  lastContactedAt   DateTime?       @map("last_contacted_at")
+  attemptCount      Int             @default(0) @map("attempt_count")
+  followupUsed      Boolean         @default(false) @map("followup_used")
+  assignedTo        String?         @map("assigned_to")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  messages       Message[]
+  conversations  Conversation[]
+
+  @@index([telegramId])
+  @@index([outreachStatus])
+  @@index([consentStatus])
+  @@map("leads")
+}
+
+model Message {
+  id                 String           @id @default(uuid()) @db.Uuid
+  leadId             String           @map("lead_id") @db.Uuid
+  direction          MessageDirection
+  content            String           @db.Text
+  status             MessageStatus
+  telegramMessageId  String?          @map("telegram_message_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  lead              Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  classifications   Classification[]
+
+  @@index([leadId])
+  @@map("messages")
+}
+
+model Conversation {
+  id        String             @id @default(uuid()) @db.Uuid
+  leadId    String             @map("lead_id") @db.Uuid
+  summary   String?            @db.Text
+  status    ConversationStatus @default(OPEN)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("conversations")
+}
+
+model Classification {
+  id              String               @id @default(uuid()) @db.Uuid
+  messageId       String               @map("message_id") @db.Uuid
+  label           ClassificationLabel
+  confidence      Decimal              @db.Decimal(5, 4)
+  rawModelOutput  Json?                @map("raw_model_output")
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("classifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      String
+  message   String   @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.env
+.env.*
+admin/node_modules
+admin/dist
+coverage
+*.log

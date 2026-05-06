@@ -1,0 +1,45 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #e8eaed;
+  background: #0f1419;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: #7ab4ff;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+.panel {
+  background: #1a2330;
+  border: 1px solid #2d3a4f;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  border-bottom: 1px solid #2d3a4f;
+  padding: 0.5rem 0.35rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+th {
+  color: #9aa5b5;
+  font-weight: 600;
+}
+.error {
+  color: #f87171;
+}

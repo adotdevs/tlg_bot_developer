@@ -86,3 +86,7 @@ export function loadEnv(): Env {
   cached = parsed.data;
   return cached;
 }
+
+export function resetEnvCache(): void {
+  cached = null;
+}

@@ -60,4 +60,37 @@ export const outreachApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind: "initial" }),
     }),
+  settings: () =>
+    api<{
+      TELEGRAM_BOT_TOKEN: string;
+      OPENAI_API_KEY: string;
+      OPENAI_MODEL: string;
+      USE_OPENAI_PERSONALIZATION: boolean;
+      USE_OPENAI_CLASSIFICATION: boolean;
+      hasTelegramToken: boolean;
+      hasOpenAiKey: boolean;
+    }>("/system/settings"),
+  saveSettings: (payload: {
+    TELEGRAM_BOT_TOKEN?: string;
+    OPENAI_API_KEY?: string;
+    OPENAI_MODEL?: string;
+    USE_OPENAI_PERSONALIZATION?: boolean;
+    USE_OPENAI_CLASSIFICATION?: boolean;
+    ADMIN_API_KEY?: string;
+  }) =>
+    api<{ ok: boolean }>("/system/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  processQueues: (limit = 50) =>
+    api<{
+      ok: boolean;
+      outreach: { processed: number; failed: number };
+      followup: { processed: number; failed: number };
+    }>("/system/process-queues", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit }),
+    }),
 };

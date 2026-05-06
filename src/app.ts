@@ -10,6 +10,7 @@ import { adminConversationRoutes } from "./routes/admin/conversations.js";
 import { adminClassificationRoutes } from "./routes/admin/classifications.js";
 import { adminLogRoutes } from "./routes/admin/logs.js";
 import { adminExportRoutes } from "./routes/admin/export.js";
+import { systemRoutes } from "./routes/admin/system.js";
 import { telegramWebhookRoutes } from "./routes/telegram/webhook.js";
 
 export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
@@ -24,6 +25,7 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
 
   await healthRoutes(app);
   await telegramWebhookRoutes(app);
+  await systemRoutes(app);
 
   await app.register(adminLeadRoutes, { prefix: "/api/v1" });
   await app.register(adminQueueRoutes, { prefix: "/api/v1" });

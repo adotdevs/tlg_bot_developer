@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getApiKey, outreachApi, setApiKey } from "./api";
 
 type LeadRow = {
@@ -13,6 +13,11 @@ type LeadRow = {
 
 export default function App() {
   const [keyInput, setKeyInput] = useState(getApiKey());
+  const [telegramTokenInput, setTelegramTokenInput] = useState("");
+  const [openAiKeyInput, setOpenAiKeyInput] = useState("");
+  const [openAiModelInput, setOpenAiModelInput] = useState("gpt-4o-mini");
+  const [usePersonalization, setUsePersonalization] = useState(true);
+  const [useClassification, setUseClassification] = useState(true);
   const queryClient = useQueryClient();
 
   const leads = useQuery({
@@ -33,6 +38,23 @@ export default function App() {
     queryFn: () => outreachApi.logs(),
     enabled: !!getApiKey(),
   });
+
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => outreachApi.settings(),
+    enabled: !!getApiKey(),
+  });
+
+  useEffect(() => {
+    if (!settings.data) return;
+    setOpenAiModelInput(settings.data.OPENAI_MODEL ?? "gpt-4o-mini");
+    setUsePersonalization(settings.data.USE_OPENAI_PERSONALIZATION);
+    setUseClassification(settings.data.USE_OPENAI_CLASSIFICATION);
+  }, [
+    settings.data?.OPENAI_MODEL,
+    settings.data?.USE_OPENAI_PERSONALIZATION,
+    settings.data?.USE_OPENAI_CLASSIFICATION,
+  ]);
 
   const upload = useMutation({
     mutationFn: (f: File) => outreachApi.upload(f),
@@ -55,6 +77,31 @@ export default function App() {
   const resume = useMutation({
     mutationFn: () => outreachApi.resume(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["queues"] }),
+  });
+
+  const saveSettings = useMutation({
+    mutationFn: () =>
+      outreachApi.saveSettings({
+        TELEGRAM_BOT_TOKEN: telegramTokenInput || undefined,
+        OPENAI_API_KEY: openAiKeyInput || undefined,
+        OPENAI_MODEL: openAiModelInput,
+        USE_OPENAI_PERSONALIZATION: usePersonalization,
+        USE_OPENAI_CLASSIFICATION: useClassification,
+      }),
+    onSuccess: () => {
+      setTelegramTokenInput("");
+      setOpenAiKeyInput("");
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+
+  const runQueuesNow = useMutation({
+    mutationFn: () => outreachApi.processQueues(25),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["queues"] });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
   });
 
   return (
@@ -93,6 +140,72 @@ export default function App() {
       </div>
 
       <div className="panel">
+        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Runtime settings</h2>
+        {settings.data && (
+          <p style={{ fontSize: "0.85rem", color: "#9aa5b5" }}>
+            Telegram token: {settings.data.hasTelegramToken ? "set" : "not set"}
+            {" · "}OpenAI key: {settings.data.hasOpenAiKey ? "set" : "not set"}
+          </p>
+        )}
+        <div style={{ display: "grid", gap: 10, maxWidth: 720 }}>
+          <label>
+            Telegram bot token (leave empty to keep current)
+            <input
+              type="password"
+              value={telegramTokenInput}
+              onChange={(e) => setTelegramTokenInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            OpenAI API key (leave empty to keep current)
+            <input
+              type="password"
+              value={openAiKeyInput}
+              onChange={(e) => setOpenAiKeyInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            OpenAI model
+            <input
+              type="text"
+              value={openAiModelInput}
+              onChange={(e) => setOpenAiModelInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={usePersonalization}
+              onChange={(e) => setUsePersonalization(e.target.checked)}
+            />{" "}
+            Use OpenAI personalization
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={useClassification}
+              onChange={(e) => setUseClassification(e.target.checked)}
+            />{" "}
+            Use OpenAI classification
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={() => saveSettings.mutate()}
+          disabled={saveSettings.isPending}
+          style={{ marginTop: 10 }}
+        >
+          {saveSettings.isPending ? "Saving..." : "Save runtime settings"}
+        </button>
+        {saveSettings.isError && (
+          <p className="error">{(saveSettings.error as Error).message}</p>
+        )}
+      </div>
+
+      <div className="panel">
         <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Queues</h2>
         {queues.isLoading && <p>Loading…</p>}
         {queues.error && (
@@ -112,7 +225,18 @@ export default function App() {
             <button type="button" onClick={() => resume.mutate()}>
               Resume
             </button>
+            {" "}
+            <button type="button" onClick={() => runQueuesNow.mutate()}>
+              Process queued jobs now
+            </button>
           </>
+        )}
+        {runQueuesNow.isSuccess && (
+          <p style={{ fontSize: "0.85rem", marginTop: 8 }}>
+            Processed this run: outreach{" "}
+            <strong>{runQueuesNow.data.outreach.processed}</strong>, follow-up{" "}
+            <strong>{runQueuesNow.data.followup.processed}</strong>.
+          </p>
         )}
       </div>
 

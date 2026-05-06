@@ -2,14 +2,21 @@ import { loadEnv } from "../config/env.js";
 import OpenAI from "openai";
 
 let clientSingleton: OpenAI | null = null;
+let clientApiKey = "";
 
 function getClient(): OpenAI | null {
   const env = loadEnv();
   if (!env.OPENAI_API_KEY) return null;
-  if (!clientSingleton) {
+  if (!clientSingleton || clientApiKey !== env.OPENAI_API_KEY) {
     clientSingleton = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    clientApiKey = env.OPENAI_API_KEY;
   }
   return clientSingleton;
+}
+
+export function resetOpenAIClient(): void {
+  clientSingleton = null;
+  clientApiKey = "";
 }
 
 export type PersonalizeVars = {

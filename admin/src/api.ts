@@ -64,20 +64,51 @@ export const outreachApi = {
   settings: () =>
     api<{
       TELEGRAM_BOT_TOKEN: string;
+      TELEGRAM_WEBHOOK_SECRET: string;
+      PUBLIC_WEBHOOK_BASE_URL: string;
+      TELEGRAM_WEBHOOK_PATH: string;
       OPENAI_API_KEY: string;
       OPENAI_MODEL: string;
       USE_OPENAI_PERSONALIZATION: boolean;
       USE_OPENAI_CLASSIFICATION: boolean;
+      MAX_MESSAGES_PER_MINUTE: number;
+      DAILY_SEND_CAP: number;
+      PER_LEAD_COOLDOWN_HOURS: number;
+      MAX_LEAD_ATTEMPTS: number;
+      FAILURE_RATE_THRESHOLD: number;
+      CIRCUIT_WINDOW_SECONDS: number;
+      TELEGRAM_ERROR_SPIKE_THRESHOLD: number;
+      ALLOWED_CONSENT_STATUSES: string;
+      SENDER_NAME: string;
+      SENDER_COMPANY: string;
+      OUTREACH_TEMPLATE: string;
+      SALES_WEBHOOK_URL: string;
       hasTelegramToken: boolean;
+      hasWebhookSecret: boolean;
       hasOpenAiKey: boolean;
     }>("/system/settings"),
   saveSettings: (payload: {
     TELEGRAM_BOT_TOKEN?: string;
+    TELEGRAM_WEBHOOK_SECRET?: string;
+    PUBLIC_WEBHOOK_BASE_URL?: string;
+    TELEGRAM_WEBHOOK_PATH?: string;
     OPENAI_API_KEY?: string;
     OPENAI_MODEL?: string;
     USE_OPENAI_PERSONALIZATION?: boolean;
     USE_OPENAI_CLASSIFICATION?: boolean;
     ADMIN_API_KEY?: string;
+    MAX_MESSAGES_PER_MINUTE?: number;
+    DAILY_SEND_CAP?: number;
+    PER_LEAD_COOLDOWN_HOURS?: number;
+    MAX_LEAD_ATTEMPTS?: number;
+    FAILURE_RATE_THRESHOLD?: number;
+    CIRCUIT_WINDOW_SECONDS?: number;
+    TELEGRAM_ERROR_SPIKE_THRESHOLD?: number;
+    ALLOWED_CONSENT_STATUSES?: string;
+    SENDER_NAME?: string;
+    SENDER_COMPANY?: string;
+    OUTREACH_TEMPLATE?: string;
+    SALES_WEBHOOK_URL?: string;
   }) =>
     api<{ ok: boolean }>("/system/settings", {
       method: "POST",

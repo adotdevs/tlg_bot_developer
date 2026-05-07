@@ -14,10 +14,27 @@ type LeadRow = {
 export default function App() {
   const [keyInput, setKeyInput] = useState(getApiKey());
   const [telegramTokenInput, setTelegramTokenInput] = useState("");
+  const [webhookSecretInput, setWebhookSecretInput] = useState("");
+  const [publicWebhookBaseUrl, setPublicWebhookBaseUrl] = useState("");
+  const [webhookPath, setWebhookPath] = useState("/telegram/webhook");
   const [openAiKeyInput, setOpenAiKeyInput] = useState("");
   const [openAiModelInput, setOpenAiModelInput] = useState("gpt-4o-mini");
   const [usePersonalization, setUsePersonalization] = useState(true);
   const [useClassification, setUseClassification] = useState(true);
+  const [maxPerMinute, setMaxPerMinute] = useState(10);
+  const [dailyCap, setDailyCap] = useState(100);
+  const [cooldownHours, setCooldownHours] = useState(24);
+  const [maxAttempts, setMaxAttempts] = useState(2);
+  const [failureThreshold, setFailureThreshold] = useState(0.35);
+  const [circuitWindowSeconds, setCircuitWindowSeconds] = useState(300);
+  const [telegramSpikeThreshold, setTelegramSpikeThreshold] = useState(20);
+  const [allowedConsentStatuses, setAllowedConsentStatuses] = useState(
+    "GRANTED,EXPLICIT_OPT_IN"
+  );
+  const [senderName, setSenderName] = useState("Alex");
+  const [senderCompany, setSenderCompany] = useState("Your Company");
+  const [outreachTemplate, setOutreachTemplate] = useState("");
+  const [salesWebhookUrl, setSalesWebhookUrl] = useState("");
   const queryClient = useQueryClient();
 
   const leads = useQuery({
@@ -50,8 +67,38 @@ export default function App() {
     setOpenAiModelInput(settings.data.OPENAI_MODEL ?? "gpt-4o-mini");
     setUsePersonalization(settings.data.USE_OPENAI_PERSONALIZATION);
     setUseClassification(settings.data.USE_OPENAI_CLASSIFICATION);
+    setPublicWebhookBaseUrl(settings.data.PUBLIC_WEBHOOK_BASE_URL ?? "");
+    setWebhookPath(settings.data.TELEGRAM_WEBHOOK_PATH ?? "/telegram/webhook");
+    setMaxPerMinute(settings.data.MAX_MESSAGES_PER_MINUTE ?? 10);
+    setDailyCap(settings.data.DAILY_SEND_CAP ?? 100);
+    setCooldownHours(settings.data.PER_LEAD_COOLDOWN_HOURS ?? 24);
+    setMaxAttempts(settings.data.MAX_LEAD_ATTEMPTS ?? 2);
+    setFailureThreshold(settings.data.FAILURE_RATE_THRESHOLD ?? 0.35);
+    setCircuitWindowSeconds(settings.data.CIRCUIT_WINDOW_SECONDS ?? 300);
+    setTelegramSpikeThreshold(settings.data.TELEGRAM_ERROR_SPIKE_THRESHOLD ?? 20);
+    setAllowedConsentStatuses(
+      settings.data.ALLOWED_CONSENT_STATUSES ?? "GRANTED,EXPLICIT_OPT_IN"
+    );
+    setSenderName(settings.data.SENDER_NAME ?? "Alex");
+    setSenderCompany(settings.data.SENDER_COMPANY ?? "Your Company");
+    setOutreachTemplate(settings.data.OUTREACH_TEMPLATE ?? "");
+    setSalesWebhookUrl(settings.data.SALES_WEBHOOK_URL ?? "");
   }, [
+    settings.data?.ALLOWED_CONSENT_STATUSES,
+    settings.data?.CIRCUIT_WINDOW_SECONDS,
+    settings.data?.DAILY_SEND_CAP,
+    settings.data?.FAILURE_RATE_THRESHOLD,
+    settings.data?.MAX_LEAD_ATTEMPTS,
+    settings.data?.MAX_MESSAGES_PER_MINUTE,
     settings.data?.OPENAI_MODEL,
+    settings.data?.OUTREACH_TEMPLATE,
+    settings.data?.PER_LEAD_COOLDOWN_HOURS,
+    settings.data?.PUBLIC_WEBHOOK_BASE_URL,
+    settings.data?.SALES_WEBHOOK_URL,
+    settings.data?.SENDER_COMPANY,
+    settings.data?.SENDER_NAME,
+    settings.data?.TELEGRAM_ERROR_SPIKE_THRESHOLD,
+    settings.data?.TELEGRAM_WEBHOOK_PATH,
     settings.data?.USE_OPENAI_PERSONALIZATION,
     settings.data?.USE_OPENAI_CLASSIFICATION,
   ]);
@@ -83,13 +130,29 @@ export default function App() {
     mutationFn: () =>
       outreachApi.saveSettings({
         TELEGRAM_BOT_TOKEN: telegramTokenInput || undefined,
+        TELEGRAM_WEBHOOK_SECRET: webhookSecretInput || undefined,
+        PUBLIC_WEBHOOK_BASE_URL: publicWebhookBaseUrl,
+        TELEGRAM_WEBHOOK_PATH: webhookPath,
         OPENAI_API_KEY: openAiKeyInput || undefined,
         OPENAI_MODEL: openAiModelInput,
         USE_OPENAI_PERSONALIZATION: usePersonalization,
         USE_OPENAI_CLASSIFICATION: useClassification,
+        MAX_MESSAGES_PER_MINUTE: maxPerMinute,
+        DAILY_SEND_CAP: dailyCap,
+        PER_LEAD_COOLDOWN_HOURS: cooldownHours,
+        MAX_LEAD_ATTEMPTS: maxAttempts,
+        FAILURE_RATE_THRESHOLD: failureThreshold,
+        CIRCUIT_WINDOW_SECONDS: circuitWindowSeconds,
+        TELEGRAM_ERROR_SPIKE_THRESHOLD: telegramSpikeThreshold,
+        ALLOWED_CONSENT_STATUSES: allowedConsentStatuses,
+        SENDER_NAME: senderName,
+        SENDER_COMPANY: senderCompany,
+        OUTREACH_TEMPLATE: outreachTemplate,
+        SALES_WEBHOOK_URL: salesWebhookUrl,
       }),
     onSuccess: () => {
       setTelegramTokenInput("");
+      setWebhookSecretInput("");
       setOpenAiKeyInput("");
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -144,6 +207,8 @@ export default function App() {
         {settings.data && (
           <p style={{ fontSize: "0.85rem", color: "#9aa5b5" }}>
             Telegram token: {settings.data.hasTelegramToken ? "set" : "not set"}
+            {" · "}Webhook secret:{" "}
+            {settings.data.hasWebhookSecret ? "set" : "not set"}
             {" · "}OpenAI key: {settings.data.hasOpenAiKey ? "set" : "not set"}
           </p>
         )}
@@ -154,6 +219,33 @@ export default function App() {
               type="password"
               value={telegramTokenInput}
               onChange={(e) => setTelegramTokenInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Telegram webhook secret (leave empty to keep current)
+            <input
+              type="password"
+              value={webhookSecretInput}
+              onChange={(e) => setWebhookSecretInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Public webhook base URL
+            <input
+              type="text"
+              value={publicWebhookBaseUrl}
+              onChange={(e) => setPublicWebhookBaseUrl(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Telegram webhook path
+            <input
+              type="text"
+              value={webhookPath}
+              onChange={(e) => setWebhookPath(e.target.value)}
               style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
             />
           </label>
@@ -172,6 +264,114 @@ export default function App() {
               type="text"
               value={openAiModelInput}
               onChange={(e) => setOpenAiModelInput(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Allowed consent statuses (comma separated)
+            <input
+              type="text"
+              value={allowedConsentStatuses}
+              onChange={(e) => setAllowedConsentStatuses(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Sender name
+            <input
+              type="text"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Sender company
+            <input
+              type="text"
+              value={senderCompany}
+              onChange={(e) => setSenderCompany(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Outreach template
+            <textarea
+              value={outreachTemplate}
+              onChange={(e) => setOutreachTemplate(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px", minHeight: 80 }}
+            />
+          </label>
+          <label>
+            Sales webhook URL
+            <input
+              type="text"
+              value={salesWebhookUrl}
+              onChange={(e) => setSalesWebhookUrl(e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Max messages per minute
+            <input
+              type="number"
+              value={maxPerMinute}
+              onChange={(e) => setMaxPerMinute(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Daily send cap
+            <input
+              type="number"
+              value={dailyCap}
+              onChange={(e) => setDailyCap(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Per-lead cooldown hours
+            <input
+              type="number"
+              value={cooldownHours}
+              onChange={(e) => setCooldownHours(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Max lead attempts
+            <input
+              type="number"
+              value={maxAttempts}
+              onChange={(e) => setMaxAttempts(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Failure rate threshold (0 to 1)
+            <input
+              type="number"
+              step="0.01"
+              value={failureThreshold}
+              onChange={(e) => setFailureThreshold(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Circuit window seconds
+            <input
+              type="number"
+              value={circuitWindowSeconds}
+              onChange={(e) => setCircuitWindowSeconds(Number(e.target.value))}
+              style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
+            />
+          </label>
+          <label>
+            Telegram error spike threshold
+            <input
+              type="number"
+              value={telegramSpikeThreshold}
+              onChange={(e) => setTelegramSpikeThreshold(Number(e.target.value))}
               style={{ width: "100%", marginTop: 6, padding: "6px 8px" }}
             />
           </label>
